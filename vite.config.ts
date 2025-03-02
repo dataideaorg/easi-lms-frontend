@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/dataidea-lms-frontend/',
   plugins: [react()],
   server: {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://lmsapi.dataidea.org/',
         changeOrigin: true,
         secure: false,
         ws: true,
