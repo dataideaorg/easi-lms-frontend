@@ -1,210 +1,247 @@
-import React from 'react';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Link,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
 import { useFormik } from 'formik';
-import * as yup from 'yup';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import * as Yup from 'yup';
+import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../services/api';
+import { useState } from 'react';
 
-const validationSchema = yup.object({
-  username: yup
-    .string()
-    .required('Username is required')
-    .min(3, 'Username must be at least 3 characters'),
-  email: yup
-    .string()
-    .email('Enter a valid email')
-    .required('Email is required'),
-  password: yup
-    .string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters'),
-  confirmPassword: yup
-    .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords must match'),
-  first_name: yup.string().required('First name is required'),
-  last_name: yup.string().required('Last name is required'),
-  user_type: yup.string().required('Please select a user type'),
-});
+type RegisterFormValues = {
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  gender: 'M' | 'F' | 'N';
+};
 
-const Register: React.FC = () => {
+const Register = () => {
   const navigate = useNavigate();
-  const { register, error } = useAuth();
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-  const formik = useFormik({
+  const formik = useFormik<RegisterFormValues>({
     initialValues: {
       username: '',
-      email: '',
       password: '',
-      confirmPassword: '',
       first_name: '',
       last_name: '',
-      user_type: '',
+      email: '',
+      gender: 'N',
     },
-    validationSchema,
-    onSubmit: async (values) => {
+    validationSchema: Yup.object({
+      username: Yup.string()
+        .max(25, 'Must be 25 characters or less')
+        .required('Required'),
+      password: Yup.string()
+        .min(8, 'Must be at least 8 characters')
+        .required('Required'),
+      first_name: Yup.string()
+        .max(25, 'Must be 25 characters or less')
+        .required('Required'),
+      last_name: Yup.string()
+        .max(25, 'Must be 25 characters or less')
+        .required('Required'),
+      email: Yup.string().email('Invalid email address'),
+      gender: Yup.string()
+        .oneOf(['M', 'F', 'N'] as const, 'Invalid gender')
+        .required('Required'),
+    }),
+    onSubmit: async (values, { setSubmitting, setErrors }) => {
       try {
-        const { confirmPassword, ...registrationData } = values;
-        await register(registrationData);
-        navigate('/courses');
+        setGeneralError(null);
+        await authAPI.register(values);
+        navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
       } catch (error: any) {
-        console.error('Registration failed:', error);
-        if (error.response?.data?.errors) {
-          const serverErrors = error.response.data.errors;
-          Object.keys(serverErrors).forEach((field) => {
-            formik.setFieldError(field, serverErrors[field][0]);
-          });
-        } else if (error.response?.data?.error) {
-          formik.setStatus(error.response.data.error);
+        console.error('Registration error:', error);
+        if (error.response?.data) {
+          if (typeof error.response.data === 'object') {
+            setErrors(error.response.data);
+          } else {
+            setGeneralError(error.response.data.message || 'Registration failed. Please try again.');
+          }
+        } else {
+          setGeneralError('An unexpected error occurred. Please try again.');
         }
+      } finally {
+        setSubmitting(false);
       }
     },
   });
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Register for DATAIDEA
-          </Typography>
-          {error && (
-            <Typography color="error" align="center" gutterBottom>
-              {error}
-            </Typography>
-          )}
-          {formik.status && (
-            <Typography color="error" align="center" gutterBottom>
-              {formik.status}
-            </Typography>
-          )}
-          <form onSubmit={formik.handleSubmit}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                fullWidth
-                id="first_name"
-                name="first_name"
-                label="First Name"
-                margin="normal"
-                value={formik.values.first_name}
-                onChange={formik.handleChange}
-                error={formik.touched.first_name && Boolean(formik.errors.first_name)}
-                helperText={formik.touched.first_name && formik.errors.first_name}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-primary hover:text-primary-dark">
+              Sign in
+            </Link>
+          </p>
+        </div>
+
+        {generalError && (
+          <div className="rounded-md bg-red-50 p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{generalError}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={formik.handleSubmit} noValidate>
+          <div className="rounded-md shadow-sm space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  id="first_name"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                    formik.touched.first_name && formik.errors.first_name
+                      ? 'border-red-300'
+                      : 'border-gray-300'
+                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm`}
+                  {...formik.getFieldProps('first_name')}
+                />
+                {formik.touched.first_name && formik.errors.first_name && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.first_name}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  id="last_name"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                    formik.touched.last_name && formik.errors.last_name
+                      ? 'border-red-300'
+                      : 'border-gray-300'
+                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm`}
+                  {...formik.getFieldProps('last_name')}
+                />
+                {formik.touched.last_name && formik.errors.last_name && (
+                  <p className="mt-1 text-sm text-red-600">{formik.errors.last_name}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                autoComplete="username"
+                required
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  formik.touched.username && formik.errors.username
+                    ? 'border-red-300'
+                    : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm`}
+                {...formik.getFieldProps('username')}
               />
-              <TextField
-                fullWidth
-                id="last_name"
-                name="last_name"
-                label="Last Name"
-                margin="normal"
-                value={formik.values.last_name}
-                onChange={formik.handleChange}
-                error={formik.touched.last_name && Boolean(formik.errors.last_name)}
-                helperText={formik.touched.last_name && formik.errors.last_name}
+              {formik.touched.username && formik.errors.username && (
+                <p className="mt-1 text-sm text-red-600">{formik.errors.username}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email (optional)
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  formik.touched.email && formik.errors.email
+                    ? 'border-red-300'
+                    : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm`}
+                {...formik.getFieldProps('email')}
               />
-            </Box>
-            <TextField
-              fullWidth
-              id="username"
-              name="username"
-              label="Username"
-              margin="normal"
-              value={formik.values.username}
-              onChange={formik.handleChange}
-              error={formik.touched.username && Boolean(formik.errors.username)}
-              helperText={formik.touched.username && formik.errors.username}
-            />
-            <TextField
-              fullWidth
-              id="email"
-              name="email"
-              label="Email"
-              margin="normal"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-            />
-            <TextField
-              fullWidth
-              id="password"
-              name="password"
-              label="Password"
-              type="password"
-              margin="normal"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              error={formik.touched.password && Boolean(formik.errors.password)}
-              helperText={formik.touched.password && formik.errors.password}
-            />
-            <TextField
-              fullWidth
-              id="confirmPassword"
-              name="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              margin="normal"
-              value={formik.values.confirmPassword}
-              onChange={formik.handleChange}
-              error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
-              helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="user-type-label">User Type</InputLabel>
-              <Select
-                labelId="user-type-label"
-                id="user_type"
-                name="user_type"
-                value={formik.values.user_type}
-                onChange={formik.handleChange}
-                error={formik.touched.user_type && Boolean(formik.errors.user_type)}
-                label="User Type"
+              {formik.touched.email && formik.errors.email && (
+                <p className="mt-1 text-sm text-red-600">{formik.errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  formik.touched.password && formik.errors.password
+                    ? 'border-red-300'
+                    : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm`}
+                {...formik.getFieldProps('password')}
+              />
+              {formik.touched.password && formik.errors.password && (
+                <p className="mt-1 text-sm text-red-600">{formik.errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                Gender
+              </label>
+              <select
+                id="gender"
+                required
+                className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border ${
+                  formik.touched.gender && formik.errors.gender
+                    ? 'border-red-300'
+                    : 'border-gray-300'
+                } focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md`}
+                {...formik.getFieldProps('gender')}
               >
-                <MenuItem value="student">Student</MenuItem>
-                <MenuItem value="instructor">Instructor</MenuItem>
-              </Select>
-            </FormControl>
-            <Button
+                <option value="N">Prefer not to say</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+              {formik.touched.gender && formik.errors.gender && (
+                <p className="mt-1 text-sm text-red-600">{formik.errors.gender}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <button
               type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              sx={{ mt: 3, mb: 2 }}
               disabled={formik.isSubmitting}
+              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+                formik.isSubmitting
+                  ? 'bg-primary-light cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+              }`}
             >
-              {formik.isSubmitting ? 'Registering...' : 'Register'}
-            </Button>
-          </form>
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2">
-              Already have an account?{' '}
-              <Link component={RouterLink} to="/login">
-                Login here
-              </Link>
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+              {formik.isSubmitting ? 'Creating account...' : 'Create account'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 

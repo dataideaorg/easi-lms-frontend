@@ -13,8 +13,6 @@ import {
   MenuItem,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   Divider,
   Switch,
   FormControlLabel,
@@ -66,7 +64,7 @@ const QuizForm: React.FC = () => {
   const isEditing = Boolean(quizId);
 
   // Fetch quiz data if editing
-  const { data: quizData, isLoading: isLoadingQuiz } = useQuery(
+  const { isLoading: isLoadingQuiz } = useQuery(
     ['quiz', quizId],
     () => quizzesAPI.getQuiz(Number(courseId), Number(quizId)),
     {

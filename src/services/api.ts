@@ -22,9 +22,6 @@ function getCsrfToken() {
 // Create API instance
 const lmsApi = axios.create({
   baseURL: LMS_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
   withCredentials: true, // Enable sending cookies
 });
 
@@ -33,13 +30,18 @@ lmsApi.interceptors.request.use(
   (config) => {
     // Get CSRF token
     const csrfToken = getCsrfToken();
+    
+    // Always set the X-CSRFToken header if we have a token
     if (csrfToken) {
       config.headers['X-CSRFToken'] = csrfToken;
     }
     
-    // Set proper content type for FormData
+    // Set Content-Type header based on the request data
     if (config.data instanceof FormData) {
-      config.headers['Content-Type'] = 'multipart/form-data';
+      // Don't set Content-Type for FormData, let the browser set it
+      delete config.headers['Content-Type'];
+    } else {
+      config.headers['Content-Type'] = 'application/json';
     }
     
     return config;
@@ -49,24 +51,60 @@ lmsApi.interceptors.request.use(
   }
 );
 
+// Add response interceptor to handle errors
+lmsApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authAPI = {
-  getCsrfToken: () => lmsApi.get('/users/csrf_token/'),
-  login: async (username: string, password: string) => {
-    // Get CSRF token first
-    await authAPI.getCsrfToken();
-    // Then perform login
-    return lmsApi.post('/users/login/', { username, password });
+  getCsrfToken: async () => {
+    const response = await lmsApi.get('/users/csrf_token/');
+    return response.data;
   },
-  register: async (data: any) => {
-    // Get CSRF token first
-    await authAPI.getCsrfToken();
-    // Then perform registration
-    return lmsApi.post('/users/register/', data);
+  login: async (username: string, password: string) => {
+    try {
+      await authAPI.getCsrfToken();
+      const response = await lmsApi.post('/users/login/', { username, password });
+      return response.data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
+  register: async (data: {
+    username: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    gender: 'M' | 'F' | 'N';
+  }) => {
+    try {
+      await authAPI.getCsrfToken();
+      const response = await lmsApi.post('/users/register/', data);
+      return response.data;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   },
   getProfile: () => lmsApi.get('/users/me/'),
   updateProfile: (data: FormData) => lmsApi.patch('/users/me/', data),
-  logout: () => lmsApi.post('/users/logout/'),
+  logout: async () => {
+    try {
+      await authAPI.getCsrfToken();
+      const response = await lmsApi.post('/users/logout/');
+      return response.data;
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
+    }
+  },
 };
 
 // Courses API
