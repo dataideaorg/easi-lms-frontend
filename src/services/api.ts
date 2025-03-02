@@ -22,7 +22,14 @@ function getCsrfToken() {
 // Create API instance
 const lmsApi = axios.create({
   baseURL: LMS_API_URL,
-  withCredentials: true, // Enable sending cookies
+  withCredentials: true,
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  },
+  // Adding xsrfCookie configuration
+  xsrfCookieName: 'csrftoken',
+  xsrfHeaderName: 'X-CSRFToken',
 });
 
 // Add request interceptor to include CSRF token
