@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const LMS_API_URL = 'http://lmsapi.dataidea.org/api';
+const LMS_API_URL = 'https://lmsapi.dataidea.org/api';
 
 // Function to get CSRF token from cookies
 function getCsrfToken() {

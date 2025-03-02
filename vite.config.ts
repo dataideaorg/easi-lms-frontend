@@ -9,7 +9,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://lmsapi.dataidea.org/',
+        target: 'https://lmsapi.dataidea.org/',
         changeOrigin: true,
         secure: false,
         ws: true,
