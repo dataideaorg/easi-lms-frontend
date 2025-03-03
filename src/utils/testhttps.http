@@ -1,0 +1,7 @@
+POST 'https://lmsapi.dataidea.org/api' HTTP/1.1
+content-type: application/json
+
+{
+    "username": "jumashafara",
+    "password": "Chappie@256"
+}

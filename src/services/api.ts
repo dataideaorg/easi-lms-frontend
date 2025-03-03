@@ -2,51 +2,25 @@ import axios from 'axios';
 
 const LMS_API_URL = 'https://lmsapi.dataidea.org/api';
 
-// Function to get CSRF token from cookies
-function getCsrfToken() {
-  const name = 'csrftoken';
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 // Create API instance
 const lmsApi = axios.create({
   baseURL: LMS_API_URL,
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   }
 });
 
-// Add request interceptor to include CSRF token
+// Add request interceptor to include auth token
 lmsApi.interceptors.request.use(
   (config) => {
-    // Get CSRF token
-    const csrfToken = getCsrfToken();
+    // Get token from localStorage
+    const token = localStorage.getItem('auth_token');
     
-    // Always set the X-CSRFToken header if we have a token
-    if (csrfToken) {
-      config.headers['X-CSRFToken'] = csrfToken;
+    // If token exists, add it to headers
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
-    // Set Content-Type header based on the request data
-    if (config.data instanceof FormData) {
-      // Don't set Content-Type for FormData, let the browser set it
-      delete config.headers['Content-Type'];
-    } else {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    
+
     return config;
   },
   (error) => {
@@ -58,6 +32,11 @@ lmsApi.interceptors.request.use(
 lmsApi.interceptors.response.use(
   (response) => response,
   (error) => {
+    // If unauthorized, clear token and redirect to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
@@ -65,14 +44,13 @@ lmsApi.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  getCsrfToken: async () => {
-    const response = await lmsApi.get('/users/csrf_token/');
-    return response.data;
-  },
   login: async (username: string, password: string) => {
     try {
-      await authAPI.getCsrfToken();
       const response = await lmsApi.post('/users/login/', { username, password });
+      // Save token to localStorage
+      if (response.data.token) {
+        localStorage.setItem('auth_token', response.data.token);
+      }
       return response.data;
     } catch (error) {
       console.error('Login error:', error);
@@ -88,8 +66,11 @@ export const authAPI = {
     gender: 'M' | 'F' | 'N';
   }) => {
     try {
-      await authAPI.getCsrfToken();
       const response = await lmsApi.post('/users/register/', data);
+      // If registration returns a token, save it
+      if (response.data.token) {
+        localStorage.setItem('auth_token', response.data.token);
+      }
       return response.data;
     } catch (error) {
       console.error('Registration error:', error);
@@ -100,9 +81,9 @@ export const authAPI = {
   updateProfile: (data: FormData) => lmsApi.patch('/users/me/', data),
   logout: async () => {
     try {
-      await authAPI.getCsrfToken();
-      const response = await lmsApi.post('/users/logout/');
-      return response.data;
+      // Clear token from localStorage
+      localStorage.removeItem('auth_token');
+      return { detail: 'Successfully logged out' };
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -119,7 +100,7 @@ export const coursesAPI = {
   deleteCourse: (id: number) => lmsApi.delete(`/courses/${id}/`),
   enrollInCourse: (id: number) => lmsApi.post(`/courses/${id}/enroll/`),
   getEnrollments: () => lmsApi.get('/enrollments/'),
-  
+
   // Sections
   getSections: (courseId: number) => lmsApi.get(`/courses/${courseId}/sections/`),
   createSection: (courseId: number, data: any) =>
@@ -128,7 +109,7 @@ export const coursesAPI = {
     lmsApi.put(`/courses/${courseId}/sections/${sectionId}/`, data),
   deleteSection: (courseId: number, sectionId: number) =>
     lmsApi.delete(`/courses/${courseId}/sections/${sectionId}/`),
-  
+
   // Lessons
   getLessons: (courseId: number, sectionId: number) =>
     lmsApi.get(`/courses/${courseId}/sections/${sectionId}/lessons/`),
@@ -140,7 +121,7 @@ export const coursesAPI = {
     lmsApi.delete(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/`),
   markLessonComplete: (courseId: number, sectionId: number, lessonId: number) =>
     lmsApi.post(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/mark_complete/`),
-  
+
   // Bookmarks
   addBookmark: (courseId: number, sectionId: number, lessonId: number, note?: string) =>
     lmsApi.post(`/courses/${courseId}/sections/${sectionId}/lessons/${lessonId}/bookmark/`, { note }),
@@ -160,7 +141,7 @@ export const quizzesAPI = {
     lmsApi.put(`/courses/${courseId}/quizzes/${quizId}/`, data),
   deleteQuiz: (courseId: number, quizId: number) =>
     lmsApi.delete(`/courses/${courseId}/quizzes/${quizId}/`),
-  
+
   // Quiz attempts
   startQuizAttempt: (courseId: number, quizId: number) =>
     lmsApi.post(`/courses/${courseId}/quizzes/${quizId}/start_attempt/`),
@@ -168,7 +149,7 @@ export const quizzesAPI = {
     lmsApi.post(`/courses/${courseId}/quizzes/${quizId}/submit_attempt/`, data),
   getQuizAttempt: (courseId: number, quizId: number, attemptId: number) =>
     lmsApi.get(`/courses/${courseId}/quizzes/${quizId}/attempts/${attemptId}/`),
-  
+
   // Questions
   getQuestions: (courseId: number, quizId: number) =>
     lmsApi.get(`/courses/${courseId}/quizzes/${quizId}/questions/`),
@@ -178,7 +159,7 @@ export const quizzesAPI = {
     lmsApi.put(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}/`, data),
   deleteQuestion: (courseId: number, quizId: number, questionId: number) =>
     lmsApi.delete(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}/`),
-  
+
   // Choices
   getChoices: (courseId: number, quizId: number, questionId: number) =>
     lmsApi.get(`/courses/${courseId}/quizzes/${quizId}/questions/${questionId}/choices/`),

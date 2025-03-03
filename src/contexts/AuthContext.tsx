@@ -33,10 +33,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuth = async () => {
     try {
+      // Only check auth if we have a token
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await authAPI.getProfile();
       setUser(response.data);
     } catch (error) {
       setUser(null);
+      localStorage.removeItem('auth_token');
     } finally {
       setIsLoading(false);
     }
@@ -45,9 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string) => {
     try {
       setError(null);
-      await authAPI.login(username, password);
+      const response = await authAPI.login(username, password);
       
-      // Get user profile
+      // Get user profile after successful login
       const profileResponse = await authAPI.getProfile();
       setUser(profileResponse.data);
     } catch (error: any) {
