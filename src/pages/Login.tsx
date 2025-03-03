@@ -129,11 +129,7 @@ const Login = () => {
             <p className="mt-2 text-center  text-gray-600">
             Don't have an account?{' '}
             <Link 
-            onClick={() => {
-              alert('You will be redirected to the DATAIDEA website to create an account.');
-              window.open('https://www.dataidea.org/register', '_blank');
-            }}
-            to="" className="font-medium text-primary hover:text-primary-dark">
+            to="/register" className="font-medium text-primary hover:text-primary-dark">
               Register
             </Link>
           </p>
