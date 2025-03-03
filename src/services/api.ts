@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const LMS_API_URL = 'https://lmsapi.dataidea.org/api';
+// const LMS_API_URL = 'http://localhost:8001/api';
 
 // Create API instance
 const lmsApi = axios.create({
@@ -48,8 +49,8 @@ export const authAPI = {
     try {
       const response = await lmsApi.post('/users/login/', { username, password });
       // Save token to localStorage
-      if (response.data.token) {
-        localStorage.setItem('auth_token', response.data.token);
+      if (response.data.access) {
+        localStorage.setItem('auth_token', response.data.access);
       }
       return response.data;
     } catch (error) {
