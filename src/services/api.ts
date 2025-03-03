@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const LMS_API_URL = 'https://lmsapi.dataidea.org/api';
+// const LMS_API_URL = 'http://localhost:8001/api';
 
 // Function to get CSRF token from cookies
 function getCsrfToken() {
@@ -23,6 +24,9 @@ function getCsrfToken() {
 const lmsApi = axios.create({
   baseURL: LMS_API_URL,
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // Add request interceptor to include CSRF token
