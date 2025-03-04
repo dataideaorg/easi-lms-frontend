@@ -35,6 +35,21 @@ const QuizResults: React.FC = () => {
 
   const attempt = attemptData?.data;
   const quiz = attempt?.quiz;
+  
+  if (!attempt || !quiz) {
+    return (
+      <Container maxWidth="md">
+        <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            Error loading quiz results
+          </Typography>
+          <Typography variant="body1">
+            Unable to load quiz attempt data. Please try again later.
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="md">
@@ -62,48 +77,54 @@ const QuizResults: React.FC = () => {
           Question Responses
         </Typography>
         <List>
-          {attempt?.answers.map((answer: any, index: number) => (
-            <React.Fragment key={answer.id}>
-              <ListItem>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle1">
-                        Question {index + 1}:
-                      </Typography>
-                      {answer.is_correct ? (
-                        <CheckCircleIcon color="success" />
-                      ) : (
-                        <CancelIcon color="error" />
-                      )}
-                    </Box>
-                  }
-                  secondary={
-                    <Box component="div">
-                      <Box component="div" sx={{ mt: 1 }}>
-                        {answer.question.text}
-                      </Box>
-                      <Box component="div" sx={{ mt: 1, color: 'text.secondary' }}>
-                        Your answer:{' '}
-                        {answer.selected_choice
-                          ? answer.selected_choice.text
-                          : answer.text_answer}
-                      </Box>
-                      {answer.question.question_type !== 'short_answer' &&
-                        !answer.is_correct && (
-                          <Box component="div" sx={{ mt: 1, color: 'success.main' }}>
-                            Correct answer:{' '}
-                            {answer.question.choices.find((c: any) => c.is_correct)
-                              ?.text}
-                          </Box>
+          {Array.isArray(attempt?.answers) && attempt.answers.length > 0 ? (
+            attempt.answers.map((answer: any, index: number) => (
+              <React.Fragment key={answer.id}>
+                <ListItem>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="subtitle1">
+                          Question {index + 1}:
+                        </Typography>
+                        {answer.is_correct ? (
+                          <CheckCircleIcon color="success" />
+                        ) : (
+                          <CancelIcon color="error" />
                         )}
-                    </Box>
-                  }
-                />
-              </ListItem>
-              <Divider />
-            </React.Fragment>
-          ))}
+                      </Box>
+                    }
+                    secondary={
+                      <Box component="div">
+                        <Box component="div" sx={{ mt: 1 }}>
+                          {answer.question?.text || 'Question text not available'}
+                        </Box>
+                        <Box component="div" sx={{ mt: 1, color: 'text.secondary' }}>
+                          Your answer:{' '}
+                          {answer.selected_choice
+                            ? answer.selected_choice.text
+                            : answer.text_answer || 'No answer provided'}
+                        </Box>
+                        {answer.question?.question_type !== 'short_answer' &&
+                          !answer.is_correct && (
+                            <Box component="div" sx={{ mt: 1, color: 'success.main' }}>
+                              Correct answer:{' '}
+                              {answer.question?.choices && answer.question.choices.find((c: any) => c.is_correct)
+                                ?.text || 'Correct answer not available'}
+                            </Box>
+                          )}
+                      </Box>
+                    }
+                  />
+                </ListItem>
+                <Divider />
+              </React.Fragment>
+            ))
+          ) : (
+            <ListItem>
+              <ListItemText primary="No question responses available." />
+            </ListItem>
+          )}
         </List>
       </Paper>
     </Container>
