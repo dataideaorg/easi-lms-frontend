@@ -128,8 +128,8 @@ const Login = () => {
             </button>
             <p className="mt-2 text-center  text-gray-600">
             Don't have an account?{' '}
-            <Link 
-            to="/register" className="font-medium text-primary hover:text-primary-dark">
+            <Link onClick={() => alert('You will be redirected to the DATAIDEA registration page. Please create an account there and then return to this page to login.')} // first alert and then send to register page of dataideaorg
+            to="https://dataidea.org/#/register" className="font-medium text-primary hover:text-primary-dark">
               Register
             </Link>
           </p>
