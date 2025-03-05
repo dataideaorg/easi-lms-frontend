@@ -66,16 +66,28 @@ export const authAPI = {
     email: string;
     gender: 'M' | 'F' | 'N';
   }) => {
-    try {
-      const response = await lmsApi.post('/users/register/', data);
-      // If registration returns a token, save it
-      if (response.data.token) {
-        localStorage.setItem('auth_token', response.data.token);
-      }
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+    // try {
+    //   const response = await lmsApi.post('/users/register/', data);
+    //   // If registration returns a token, save it
+    //   if (response.data.token) {
+    //     localStorage.setItem('auth_token', response.data.token);
+    //   }
+    //   return response.data;
+    // } catch (error) {
+    //   console.error('Registration error:', error);
+    //   throw error;
+    // }
+    const response = await fetch("https://dataidea.pythonanywhere.com/accounts/register/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Error registering user");
     }
   },
   getProfile: () => lmsApi.get('/users/me/'),
